@@ -6,9 +6,10 @@
  */
 
 import { createServer, IncomingMessage, ServerResponse } from 'http';
-import { getItemHandler, createItemHandler } from './handlers';
+import { getItemHandler, createItemHandler, updateItemHandler } from './handlers';
 
 const PORT = process.env.PORT || 3000;
+const ITEM_PATH_PATTERN = /^\/api\/items\/([A-Za-z0-9-]+)$/
 
 async function handleRequest(req: IncomingMessage, res: ServerResponse) {
   const { method, url } = req;
@@ -35,15 +36,24 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
 
   try {
     let result;
+    let id
 
     // Example routes - implement your own routing logic
-    if (method === 'GET' && url === '/api/items/test') {
-      result = await getItemHandler('test');
-    } else if (method === 'POST' && url === '/api/items') {
+    if (method === 'POST' && url === '/api/items') {
       result = await createItemHandler(parsedBody);
-    } else if (method === 'GET' && url?.startsWith('/api/items/')) {
-      const id = url.split('/').pop();
-      result = await getItemHandler(id!);
+    } else if (ITEM_PATH_PATTERN.test(url!)) {
+      const matcher = url?.match(ITEM_PATH_PATTERN)
+      const id = matcher?.[1]
+      if (method === 'GET') {
+        result = await getItemHandler(id!)
+      } else if (method === 'PUT') {
+        result =  await updateItemHandler(id!, parsedBody)
+      } else {
+        result = {
+          statusCode: 400,
+          body: { error: `Unsupported operation ${method} on path ${url}` },
+        }
+      }
     } else {
       result = {
         statusCode: 404,

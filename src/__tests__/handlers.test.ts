@@ -11,9 +11,9 @@
  */
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { createItemHandler, getItemHandler, storage } from "../handlers";
+import { createItemHandler, getItemHandler, storage, updateItemHandler } from "../handlers";
 
-describe("Example Handlers", () => {
+describe("Handlers", () => {
   describe("createItemHandler", () => {
     it("should create an item successfully", async () => {
       const itemData = {
@@ -152,4 +152,54 @@ describe("Example Handlers", () => {
       expect(getResult.body).toHaveProperty('error', 'Internal server error');
     });
   });
+
+  describe('updateItemHandler', () => {
+    it('should update an item', async () => {
+      // create an item
+      const itemData = {
+        subject: "AP Calculus",
+        itemType: "free-response",
+        difficulty: 4,
+        content: {
+          question: "Calculate the derivative...",
+          correctAnswer: "42",
+          explanation: "Using the chain rule...",
+        },
+        metadata: {
+          author: "test-author",
+          status: "approved",
+          tags: ["calculus", "derivatives"],
+        },
+        securityLevel: "standard",
+      };
+
+      const item = await storage.createItem(itemData)
+
+      const itemUpdate = {
+        subject: 'AP Spelling',
+      }
+
+      const response = await updateItemHandler(item.id, itemUpdate)
+
+      expect(response.statusCode).toBe(200)
+      if ('subject' in response.body) {
+        expect(response.body.subject).toBe('AP Spelling')
+      }
+      const storedItem = await storage.getItem(item.id)
+      expect(storedItem?.subject).toBe('AP Spelling')
+    })
+
+    it('should return an error if an invalid property is being updated', async () => {
+      const itemUpdate = {
+        myCoolNewProperty: 'AP Spelling',
+      }
+
+      const response = await updateItemHandler('testId', itemUpdate)
+
+      expect(response.statusCode).toEqual(400)
+      if ('error' in response.body) {
+        expect(response.body.error).toBe('Invalid update data')
+      }
+    })
+  })
 });
