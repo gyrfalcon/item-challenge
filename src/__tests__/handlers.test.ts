@@ -11,7 +11,7 @@
  */
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { createItemHandler, getItemHandler } from "../handlers/example.js";
+import { createItemHandler, getItemHandler, storage } from "../handlers";
 
 describe("Example Handlers", () => {
   describe("createItemHandler", () => {
@@ -43,6 +43,33 @@ describe("Example Handlers", () => {
       }
       if ("metadata" in result.body) {
         expect(result.body.metadata).toHaveProperty("author", "test-author");
+      }
+    });
+
+    it("should return an error for an invalid item", async () => {
+      const itemData = {
+        subject: "AP Biology",
+        itemType: "multiple-choice",
+        content: {
+          question: "What is photosynthesis?",
+          options: ["A", "B", "C", "D"],
+          correctAnswer: "A",
+          explanation: "Photosynthesis is the process...",
+        },
+        metadata: {
+          author: "test-author",
+          status: "draft",
+          tags: ["biology", "photosynthesis"],
+        },
+        securityLevel: "standard",
+      };
+
+      const result = await createItemHandler(itemData);
+
+      expect(result.statusCode).toBe(400);
+      expect(result.body).toHaveProperty('error');
+      if ('error' in result.body) {
+        expect(result.body.error).toBe('Incoming item structure invalid');
       }
     });
   });
@@ -92,6 +119,37 @@ describe("Example Handlers", () => {
       if ("subject" in getResult.body) {
         expect(getResult.body.subject).toBe("AP Calculus");
       }
+    });
+
+    it("should return an error for an invalid existing item", async () => {
+      // First create an item
+      const itemData = {
+        subject: "AP Calculus",
+        difficulty: 4,
+        content: {
+          question: "Calculate the derivative...",
+          correctAnswer: "42",
+          explanation: "Using the chain rule...",
+        },
+        metadata: {
+          author: "test-author",
+          status: "approved",
+          tags: ["calculus", "derivatives"],
+        },
+        securityLevel: "standard",
+      };
+
+      // create directly in storage to bypass createItemHandler's validation
+      // @ts-expect-error we're knowingly passing in an invalid type here
+      const createResult = await storage.createItem(itemData)
+
+      const itemId = createResult.id;
+
+      // Then retrieve it
+      const getResult = await getItemHandler(itemId);
+
+      expect(getResult.statusCode).toBe(500);
+      expect(getResult.body).toHaveProperty('error', 'Internal server error');
     });
   });
 });

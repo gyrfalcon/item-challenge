@@ -5,11 +5,18 @@
  * You can use this as a template for implementing the required endpoints.
  */
 
+import * as z from 'zod';
+import { validateExamItem, validateCreateItemRequest } from '../lib/validation.js';
 import { createStorage } from '../storage/index.js';
 
-const storage = createStorage();
+// Exporting this for use in unit tests;
+// ideally I would mock createStorage for
+// the tests but I ran into an issue using
+// vitest's mock and decided not to spend
+// exercise time on chasing it down.
+export const storage = createStorage();
 
-export async function getItemHandler(id: string) {
+export const getItemHandler = async (id: string) => {
   try {
     const item = await storage.getItem(id);
 
@@ -22,7 +29,7 @@ export async function getItemHandler(id: string) {
 
     return {
       statusCode: 200,
-      body: item,
+      body: validateExamItem(item),
     };
   } catch (error) {
     console.error('Error getting item:', error);
@@ -33,10 +40,10 @@ export async function getItemHandler(id: string) {
   }
 }
 
-export async function createItemHandler(data: any) {
+export const createItemHandler = async (data: any) => {
   try {
-    // TODO: Add validation using Zod
-    const item = await storage.createItem(data);
+    const newItem = validateCreateItemRequest(data)
+    const item = await storage.createItem(newItem);
 
     return {
       statusCode: 201,
@@ -44,6 +51,16 @@ export async function createItemHandler(data: any) {
     };
   } catch (error) {
     console.error('Error creating item:', error);
+    if (error instanceof z.ZodError) {
+      return {
+        statusCode: 400,
+        body: {
+          error: 'Incoming item structure invalid',
+          detail: z.treeifyError(error)
+        },
+      }
+    }
+
     return {
       statusCode: 500,
       body: { error: 'Internal server error' },
