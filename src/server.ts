@@ -6,10 +6,11 @@
  */
 
 import { createServer, IncomingMessage, ServerResponse } from 'http';
-import { getItemHandler, createItemHandler, updateItemHandler } from './handlers';
+import { getItemHandler, createItemHandler, updateItemHandler, getAuditTrailHandler } from './handlers';
 
 const PORT = process.env.PORT || 3000;
 const ITEM_PATH_PATTERN = /^\/api\/items\/([A-Za-z0-9-]+)$/
+const AUDIT_PATH_PATTERN = /^\/api\/items\/([A-Za-z0-9-]+)\/audit$/
 
 async function handleRequest(req: IncomingMessage, res: ServerResponse) {
   const { method, url } = req;
@@ -54,6 +55,10 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
           body: { error: `Unsupported operation ${method} on path ${url}` },
         }
       }
+    } else if (AUDIT_PATH_PATTERN.test(url!)) {
+      const matcher = url?.match(AUDIT_PATH_PATTERN)
+      const id = matcher?.[1]
+      result = await getAuditTrailHandler(id!)
     } else {
       result = {
         statusCode: 404,

@@ -32,7 +32,7 @@ export const getItemHandler = async (id: string) => {
       body: validateExamItem(item),
     };
   } catch (error) {
-    console.error('Error getting item:', error);
+    console.error(`Error getting item: ${id}`, error);
     return {
       statusCode: 500,
       body: { error: 'Internal server error' },
@@ -50,7 +50,7 @@ export const createItemHandler = async (data: any) => {
       body: item,
     };
   } catch (error) {
-    console.error('Error creating item:', error);
+    console.error('Error creating item', { data, error });
     if (error instanceof z.ZodError) {
       return {
         statusCode: 400,
@@ -86,7 +86,7 @@ export const updateItemHandler = async (id: string, data: any) => {
       body: updatedItem,
     }
   } catch (error) {
-    console.error('Error while handling an item update', error)
+    console.error(`Error while handling an item update for item ${id}`, error)
     if (error instanceof z.ZodError) {
       return {
         statusCode: 400,
@@ -104,7 +104,23 @@ export const updateItemHandler = async (id: string, data: any) => {
   }
 }
 
+export const getAuditTrailHandler = async (id: string) => {
+  try {
+    const auditLog = await storage.getAuditTrail(id)
+
+    return {
+      statusCode: 200,
+      body: auditLog,
+    }
+  } catch (error) {
+    console.error(`Error while getting the audit trail for item ${id}`, error)
+    return {
+      statusCode: 500,
+      body: { error: 'Internal server error' },
+    }
+  }
+}
+
 // TODO: Implement other handlers:
 // - listItemsHandler
 // - createVersionHandler
-// - getAuditTrailHandler
